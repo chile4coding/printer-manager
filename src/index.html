@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Printer Manager</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+    }
+    
+    label {
+      display: block;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      background-color: white;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+    
+    select:hover {
+      border-color: #667eea;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-refresh {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .btn-refresh:hover {
+      background: #e0e0e0;
+    }
+    
+    .btn-test {
+      background: #667eea;
+      color: white;
+    }
+    
+    .btn-test:hover {
+      background: #5568d3;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-test:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-top: 15px;
+      display: none;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+    
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+      display: block;
+    }
+    
+    .printer-count {
+      font-size: 12px;
+      color: #999;
+      margin-top: 5px;
+    }
+    
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ccc;
+    }
+    
+    .status-dot.connected {
+      background: #4caf50;
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .tab-button {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: #999;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.3s;
+    }
+    
+    .tab-button:hover {
+      color: #667eea;
+    }
+    
+    .tab-button.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .backend-status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖨️ Printer Manager</h1>
+    <p class="subtitle">Manage your desktop printer settings</p>
+    
+    <div class="tabs">
+      <button class="tab-button active" data-tab="printer-tab">Printer</button>
+      <button class="tab-button" data-tab="settings-tab">Settings</button>
+    </div>
+    
+    <!-- Printer Tab -->
+    <div id="printer-tab" class="tab-content active">
+      <div class="connection-status">
+        <div class="status-dot" id="connectionDot"></div>
+        <span id="connectionStatus">Connecting...</span>
+      </div>
+      
+      <div class="section">
+        <label for="printerSelect">Select Printer</label>
+        <select id="printerSelect" disabled>
+          <option value="">Loading printers...</option>
+        </select>
+        <div class="printer-count" id="printerCount"></div>
+      </div>
+      
+      <div class="button-group">
+        <button class="btn-refresh" onclick="refreshPrinters()">🔄 Refresh</button>
+        <button class="btn-test" id="testBtn" onclick="testPrint()" disabled>🖨️ Test Print</button>
+      </div>
+      
+      <div class="status" id="status"></div>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div id="settings-tab" class="tab-content">
+      <div class="section">
+        <label for="backendUrl">Backend URL</label>
+        <input 
+          type="text" 
+          id="backendUrl" 
+          placeholder="https://your-backend.com or http://localhost:3000"
+        >
+        <div class="backend-status" id="backendStatusText"></div>
+      </div>
+      
+      <div class="button-group">
+        <button class="btn-refresh" onclick="testBackendConnection()">🔗 Test Connection</button>
+        <button class="btn-test" onclick="saveBackendUrl()">💾 Save Settings</button>
+      </div>
+      
+      <div class="section">
+        <label>Auto-Start</label>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-test" style="flex: 1;" onclick="enableAutoStart()">✓ Enable Auto-Start</button>
+          <button class="btn-refresh" style="flex: 1;" onclick="disableAutoStart()">✗ Disable Auto-Start</button>
+        </div>
+        <div class="backend-status" id="autoStartStatus" style="margin-top: 10px;"></div>
+      </div>
+      
+      <div class="status" id="settingsStatus"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
