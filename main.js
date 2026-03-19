@@ -5,6 +5,7 @@ const http = require("http");
 const socketIO = require("socket.io");
 const ioClient = require("socket.io-client");
 const fs = require("fs");
+const { PosPrinter } = require("electron-pos-printer");
 const {
   setupAutoStart,
   disableAutoStart,
@@ -31,7 +32,7 @@ function loadConfig() {
   } catch (error) {
     console.error("Error loading config:", error);
   }
-  return { backendUrl: "http://localhost:3000" };
+  return { backendUrl: "https://abc-api.invexone.com" };
 }
 
 // Save config
@@ -62,6 +63,14 @@ function createWindow() {
   });
 
   mainWindow.loadFile("src/index.html");
+
+  // When user closes the window, hide it instead of quitting
+  mainWindow.on("close", (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
 }
 
 // Prevent multiple instances
@@ -148,6 +157,12 @@ ipcMain.handle("disable-auto-start", async () => {
 ipcMain.handle("is-auto-start-enabled", async () => {
   const enabled = await isAutoStartEnabled();
   return { enabled };
+});
+
+ipcMain.handle("quit-app", async () => {
+  app.isQuitting = true;
+  app.quit();
+  return { success: true };
 });
 
 async function loadAvailablePrinters() {
@@ -316,94 +331,84 @@ async function handlePrintRequest(data, format = "html") {
   }
 
   try {
-    let printWindow = null;
-
-    if (format === "url") {
-      console.log("Loading URL:", data);
-      printWindow = new BrowserWindow({ show: false });
-      await printWindow.loadURL(data);
-    } else if (format === "html") {
-      console.log("Loading HTML data, length:", data.length);
-      printWindow = new BrowserWindow({ show: false });
-      await printWindow.loadURL(
-        `data:text/html;charset=utf-8,${encodeURIComponent(data)}`,
-      );
-    } else if (format === "pdf") {
-      console.log("Loading PDF file:", data);
-      printWindow = new BrowserWindow({ show: false });
-      await printWindow.loadFile(data);
-    }
-
-    if (!printWindow) {
-      throw new Error("Failed to create print window");
-    }
-
-    console.log("Print window created, waiting for content to load...");
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for content to load
-
-    // Inject CSS to make text bold and sharp with max width
-    await printWindow.webContents.insertCSS(`
-      * {
-        font-weight: bold !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-        text-rendering: optimizeLegibility !important;
-      }
-      body, html {
-        line-height: 1.2 !important;
-        max-width: 20in !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
-      }
-      body {
-        width: 100% !important;
-        overflow: hidden !important;
-      }
-    `);
-
     console.log("Sending to printer:", selectedPrinter);
-    await printToSelectedPrinter(printWindow);
-
-    console.log("✓ Print completed, destroying window");
-    printWindow.destroy();
-    printWindow = null;
+    await printToSelectedPrinter(data, format);
+    console.log("✓ Print completed successfully");
   } catch (error) {
     console.error("✗ Print error:", error.message);
     throw error;
   }
 }
 
-async function printToSelectedPrinter(window) {
-  return new Promise((resolve, reject) => {
+async function printToSelectedPrinter(data, format = "html") {
+  return new Promise(async (resolve, reject) => {
     console.log("\n=== PRINTING TO DEVICE ===");
     console.log("Device Name:", selectedPrinter);
+    console.log("Format:", format);
 
-    window.webContents.print(
-      {
-        deviceName: selectedPrinter,
+    try {
+      let printData = [];
+
+      // Convert data to electron-pos-printer format
+      if (format === "html" || format === "text") {
+        // Convert HTML/text to POS array format
+        printData = [
+          {
+            type: "text",
+            value: data,
+            style: {},
+          },
+        ];
+      } else if (format === "url") {
+        printData = [
+          {
+            type: "text",
+            value: "hello chile",
+            style: { align: "left" },
+          },
+        ];
+      } else if (format === "pdf") {
+        // For PDF files
+        printData = [
+          {
+            type: "image",
+            path: data,
+          },
+        ];
+      } else if (Array.isArray(data)) {
+        // If data is already in POS format (array), use it directly
+        printData = data;
+      }
+
+      // Verify printer exists using Electron
+      const printers = await mainWindow.webContents.getPrintersAsync();
+      const printerExists = printers.find((p) => p.name === selectedPrinter);
+
+      if (!printerExists) {
+        throw new Error(`Printer "${selectedPrinter}" not found`);
+      }
+      console.log("this is the data ", printData);
+
+      // Print using electron-pos-printer
+      await PosPrinter.print(printData, {
+        printerName: selectedPrinter,
         silent: true,
-        printBackground: true,
-        margins: {
-          marginType: "custom",
-          top: 0.1,
-          bottom: 0.1,
-          left: 0,
-          right: 0,
-        },
-        scaleFactor: 70,
-      },
-      (success, failureReason) => {
-        if (success) {
-          console.log("✓✓✓ PRINT SUCCESSFUL ✓✓✓");
-          console.log("Print sent to:", selectedPrinter);
-          resolve(true);
-        } else {
-          console.error("✗✗✗ PRINT FAILED ✗✗✗");
-          console.error("Printer:", selectedPrinter);
-          console.error("Failure reason:", failureReason);
-          reject(new Error(failureReason));
-        }
-      },
-    );
+        preview: false,
+        margin: "0 0 0 0",
+        copies: 1,
+        timeOutPerLine: 400,
+        pageSize: "80mm", // page size
+      });
+
+      console.log("✓✓✓ PRINT SUCCESSFUL ✓✓✓");
+      console.log("Print sent to:", selectedPrinter);
+      resolve(true);
+    } catch (error) {
+      console.error("✗✗✗ PRINT FAILED ✗✗✗");
+      console.error("Printer:", selectedPrinter);
+      console.error("Failure reason:", error);
+      console.error("Stack:", error);
+      reject(error);
+    }
   });
 }
