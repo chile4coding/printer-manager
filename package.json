@@ -29,7 +29,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
-    "electron": "^29.0.0",
+    "electron": "^42.11.16",
     "electron-installer-windows": "^3.0.0",
     "electron-packager": "^17.1.2"
   },
